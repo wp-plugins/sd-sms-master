@@ -28,6 +28,14 @@ Full documentation can be found by downloading the lib part from the plugin site
 
 == Changelog ==
 
+= 1.2 2013-03-18 =
+* Fix: Update GIT clone/pull code and repository location.
+
+= 1.1 2013-03-15 =
+
+* New: Display config info
+* Fix: Order error logs are paragraphized
+
 = 1.0 2013-03-14 =
 * Initial release
 

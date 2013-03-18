@@ -3,7 +3,7 @@
 Plugin Name: SD SMS Master
 Plugin URI: https://it.sverigedemokraterna.se/program/sms-master/
 Description: Control an SD SMS Master server. 
-Version: 1.0
+Version: 1.2
 Author: Sverigedemokraterna IT
 Author URI: https://it.sverigedemokraterna.se
 Author Email: it@sverigedemokraterna.se
@@ -43,13 +43,13 @@ class SD_SMS_Master
 		@brief		The path where SD SMS Master expects the common include to be.
 		@var		$sms_master_include_common
 	**/
-	public static $sms_master_include_common = 'lib/sms_master_include_common.php';
+	public static $sms_master_include_common = 'git/lib/sms_master_include_common.php';
 	
 	/**
 		@brief		Location of the lib git repository.
 		@var		$lib_git
 	**/
-	public static $lib_git = 'git@kk1:smsmaster/lib';
+	public static $lib_git = 'https://github.com/sverigedemokraterna-it/sms_master.git';
 	
 	/**
 		@brief		Inherited constructor.
@@ -159,7 +159,8 @@ class SD_SMS_Master
 	{
 		$common = '../' . $this->paths['path_from_base_directory'] . '/' . SD_SMS_Master::$sms_master_include_common;
 		$lib = dirname( $common );
-		$root = dirname( $lib );
+		$git = dirname( $lib );
+		$root = dirname( $git );
 		$old_dir = getcwd();
 		
 		$rv = '';
@@ -169,38 +170,38 @@ class SD_SMS_Master
 		if ( isset( $_POST[ 'clone' ] ) )
 		{
 			chdir( $root );
-			shell_exec( 'git clone -v ' . self::$lib_git . ' 2>&1' );
+			shell_exec( 'git clone -v ' . self::$lib_git . ' git 2>&1' );
 			$this->message_( 'The lib directory has been prepared. Click on the menu again.' );
 			chdir( $old_dir );
 		}
 		
 		if ( isset( $_POST[ 'git_pull' ] ) )
 		{
-			chdir( $lib );
+			chdir( $git );
 			$this->message( shell_exec( 'git pull 2>&1' ) );
 			chdir( $old_dir );
 		}
 		
 		if ( isset( $_POST[ 'unlink' ] ) )
 		{
-			exec( 'rm -rf "' . $lib . '"' );
+			exec( 'rm -rf "' . $git . '"' );
 			$this->message( 'The lib directory has been removed.' );
 		}
 		
-		if ( is_dir( $lib ) )
+		if ( is_dir( $git ) )
 		{
-			$rv .= $this->p_( 'The SMS Master lib is currently installed. Use the buttons below to update or completely remove the lib.' );
+			$rv .= $this->p_( 'The SMS Master git is currently installed. Use the buttons below to update or completely remove the local copy.' );
 			
 			$inputs = array(
 				'git_pull' => array(
 					'css_class' => 'button-secondary',
 					'type' => 'submit',
-					'value' => $this->_( 'Update lib using git pull' ),
+					'value' => $this->_( 'Update git using git pull' ),
 				),
 				'unlink' => array(
 					'css_class' => 'button-secondary',
 					'type' => 'submit',
-					'value' => $this->_( 'Delete lib directory completely' ),
+					'value' => $this->_( 'Delete git directory completely' ),
 				),
 			);
 			
@@ -210,7 +211,7 @@ class SD_SMS_Master
 			$rv .= $this->display_form_table( $inputs );
 			
 			$rv .= '<h4>' . $this->_( 'Latest git log' ) . '</h4>';
-			chdir( $lib );
+			chdir( $git );
 			$rv .= $this->p( shell_exec( 'git log -n 5' ) );
 			chdir( $old_dir );
 		}
@@ -218,21 +219,23 @@ class SD_SMS_Master
 		{
 			if ( ! is_readable( $common ) )
 			{
-				$rv .= $this->p_( 'The lib directory must contain the SD SMS Master lib package. If the webserver has git installed, try using the button below to automatically download the latest version of the lib.' );
-				$rv .= $this->p_( 'If not, you will have to download and copy the lib package yourself.' );
+				$rv .= $this->p_( 'The git directory must contain the SD SMS Master package. If the webserver has git installed, try using the button below to automatically download the latest version from the git repository.' );
+				$rv .= $this->p_( 'If not, you will have to clone the repository yourself.' );
 				$rv .= $this->p_( 'After installation this text can be found in the Tools submenu.' );
 				
 				$inputs = array(
 					'clone' => array(
 						'css_class' => 'button-primary',
 						'type' => 'submit',
-						'value' => $this->_( 'Try to download the lib package using git' ),
+						'value' => $this->_( 'Try to download using git' ),
 					),
 				);
 				$rv .= $this->display_form_table( $inputs );
 			}
 		}
 		
+		$rv .= $this->p_( 'The git repository can be found at: %s', self::$lib_git );
+				
 		$rv .= $form->stop();
 		
 		return $rv;
@@ -346,6 +349,36 @@ class SD_SMS_Master
 				$rv .= $this->display_phone( $phone, $o );
 			}
 		}
+		
+		// Display the config
+		$rv .= '<h3>' . $this->_( 'Configuration' ) . '</h3>';
+		$rv .= '
+			<table class="widefat">
+				<caption>' . $this->_( 'Overview' ) . '</caption>
+				<thead>
+					<tr>
+						<th>' . $this->_( 'Key' ) . '</th>
+						<th>' . $this->_( 'Value' ) . '</th>
+					</tr>
+				</thead>
+				<tbody>
+		';
+		ksort( $result->config );
+		foreach( $result->config as $key => $value )
+		{
+			if ( is_array( $value ) )
+				$value = '<pre>' . var_export( $value, true ) . '</pre>';
+			$rv .= '
+					<tr>
+						<th>' . $key . '</th>
+						<th>' . $this->p( $value ) . '</th>
+					</tr>
+			';
+		}
+		$rv .= '
+				</tbody>
+			</table>
+		';
 		
 		$rv = $this->wrap( $rv, $this->_( 'Overview' ) );
 		
@@ -673,7 +706,7 @@ class SD_SMS_Master
 			$rv .= '
 				<tr>
 					<th>' . $this->_( 'Error log' ) . '</th>
-					<td>' . $order->error_log . '</td>
+					<td>' . $this->p( $order->error_log ) . '</td>
 				</tr>
 			';
 		
@@ -1811,8 +1844,8 @@ class SD_SMS_Master
 		$rv .= $this->display_form_table( $inputs );
 		$rv .= $form->stop();
 		
-		// LIB UPDATE
-		$rv .= $this->p_( '<h3>Lib</h3>' );
+		// GIT UPDATE
+		$rv .= $this->p_( '<h3>GIT</h3>' );
 		
 		$rv .= $this->admin_download();
 
